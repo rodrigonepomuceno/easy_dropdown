@@ -1,4 +1,5 @@
-import 'package:easy_dropdown/easy_dropdown.dart';
+import 'package:custom_easy_dropdown/easy_dropdown.dart';
+
 import 'package:flutter/material.dart';
 
 class ComplexExample extends StatefulWidget {
@@ -11,7 +12,7 @@ class ComplexExample extends StatefulWidget {
 class _ComplexExampleState extends State<ComplexExample> {
   final items = [
     const EasyDropdownItem(
-      id: 'user1',
+      id: 'user1',      
       widget: ListTile(
         leading: CircleAvatar(
           backgroundColor: Colors.blue,
@@ -20,6 +21,7 @@ class _ComplexExampleState extends State<ComplexExample> {
         title: Text('John Doe'),
         subtitle: Text('Software Engineer'),
       ),
+      searchableText: 'John Doe Software Engineer',
     ),
     const EasyDropdownItem(
       id: 'user2',
@@ -31,6 +33,7 @@ class _ComplexExampleState extends State<ComplexExample> {
         title: Text('Alice Smith'),
         subtitle: Text('Product Manager'),
       ),
+      searchableText: 'Alice Smith Product Manager',
       selected: true,
     ),
     const EasyDropdownItem(
@@ -43,6 +46,7 @@ class _ComplexExampleState extends State<ComplexExample> {
         title: Text('Robert Johnson'),
         subtitle: Text('UX Designer'),
       ),
+      searchableText: 'Robert Johnson UX Designer',
     ),
   ];
 
@@ -72,10 +76,12 @@ class _ComplexExampleState extends State<ComplexExample> {
             const SizedBox(height: 24),
             EasyDropdownComponent(
               items: items,
+              enableSearch: true,
+              
               onClose: (p0) => debugPrint('onClose: $p0'),
               onListChanged: (p0) => debugPrint('onListChanged: $p0'),
               onSelectionChanged: (p0) => debugPrint('onSelectionChanged: $p0'),
-              maxHeight: 500,
+              maxHeight: 500,              
               customField: Container(
                 padding: const EdgeInsets.all(8),
                 width: 250,
@@ -93,23 +99,54 @@ class _ComplexExampleState extends State<ComplexExample> {
                   ],
                 ),
               ),
+              searchController: TextEditingController(),
               customSearchField: TextField(
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.grey[100],
-                  hintText: 'Search...',
+                  hintText: 'Search people...',
                   prefixIcon: const Icon(Icons.search),
                 ),
               ),
-              customClearButton: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.clear_all),
-                label: const Text('Clear All'),
+              customClearButton: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.clear_all, size: 16, color: Colors.red),
+                    SizedBox(width: 4),
+                    Text('Clear All', 
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              customSelectAllButton: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.select_all),
-                label: const Text('Select All'),
+              customSelectAllButton: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.select_all, size: 16, color: Colors.blue),
+                    SizedBox(width: 4),
+                    Text('Select All', 
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               customListItem: (item, onTap) => ListTile(
                 leading: const Icon(Icons.person_outline),

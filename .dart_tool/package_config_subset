@@ -90,10 +90,10 @@ vm_service
 3.3
 file:///Users/rodrigo/.pub-cache/hosted/pub.dev/vm_service-14.2.5/
 file:///Users/rodrigo/.pub-cache/hosted/pub.dev/vm_service-14.2.5/lib/
-easy_dropdown
+custom_easy_dropdown
 3.0
-file:///Users/rodrigo/Dev/Apps/Vitrine/vitrine_ds/packages/easy_dropdown/
-file:///Users/rodrigo/Dev/Apps/Vitrine/vitrine_ds/packages/easy_dropdown/lib/
+file:///Users/rodrigo/Dev/Apps/packages/easy_dropdown/
+file:///Users/rodrigo/Dev/Apps/packages/easy_dropdown/lib/
 sky_engine
 3.2
 file:///Users/rodrigo/fvm/versions/3.24.3/bin/cache/pkg/sky_engine/

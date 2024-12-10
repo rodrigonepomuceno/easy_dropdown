@@ -1,6 +1,7 @@
-name: exemple
-description: Example app for easy_dropdown package
+name: custom_easy_dropdown_example
+description: Example app for custom_easy_dropdown package
 publish_to: none
+version: 1.0.0
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -9,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  easy_dropdown:
+  custom_easy_dropdown:
     path: ../
 
 dev_dependencies:

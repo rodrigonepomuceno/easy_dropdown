@@ -1,14 +1,14 @@
-# Easy Dropdown
+# Custom Easy Dropdown
 
 A highly customizable and efficient dropdown component for Flutter applications, designed to handle both simple and complex selection scenarios with an emphasis on user experience and performance.
 
-![Pub Version](https://img.shields.io/pub/v/easy_dropdown)
+![Pub Version](https://img.shields.io/pub/v/custom_easy_dropdown)
 ![Flutter Platform](https://img.shields.io/badge/platform-flutter-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ## Introduction 📱
 
-Easy Dropdown is a feature-rich dropdown component that simplifies the implementation of selection interfaces in Flutter applications. It provides a robust solution for managing single and multiple selections while maintaining optimal performance and user experience.
+Custom Easy Dropdown is a feature-rich dropdown component that simplifies the implementation of selection interfaces in Flutter applications. It provides a robust solution for managing single and multiple selections while maintaining optimal performance and user experience.
 
 ## Features 🎯
 
@@ -41,22 +41,22 @@ Easy Dropdown is a feature-rich dropdown component that simplifies the implement
 
 ```yaml
 dependencies:
-  easy_dropdown: ^0.0.1
+  custom_easy_dropdown: ^0.0.1
 ```
 
 2. Import the package:
 
 ```dart
-import 'package:easy_dropdown/easy_dropdown.dart';
+import 'package:custom_easy_dropdown/custom_easy_dropdown.dart';
 ```
 
 3. Use it in your code:
 
 ```dart
-EasyDropdownComponent(
+CustomEasyDropdownComponent(
   items: [
-    EasyDropdownItem(id: '1', widget: Text('Item 1')),
-    EasyDropdownItem(id: '2', widget: Text('Item 2')),
+    CustomEasyDropdownItem(id: '1', widget: Text('Item 1')),
+    CustomEasyDropdownItem(id: '2', widget: Text('Item 2')),
   ],
   enableSearch: true,
   onSelectionChanged: (item) {
@@ -70,7 +70,7 @@ EasyDropdownComponent(
 ### Basic Dropdown
 
 ```dart
-EasyDropdownComponent(
+CustomEasyDropdownComponent(
   items: items,
   enableSearch: true,
   searchHintText: 'Search...',
@@ -81,7 +81,7 @@ EasyDropdownComponent(
 ### Styled Dropdown
 
 ```dart
-EasyDropdownComponent(
+CustomEasyDropdownComponent(
   items: items,
   dropdownDecoration: BoxDecoration(
     color: Colors.white,
@@ -101,7 +101,7 @@ EasyDropdownComponent(
 ### Custom Field
 
 ```dart
-EasyDropdownComponent(
+CustomEasyDropdownComponent(
   items: items,
   customField: Container(
     padding: EdgeInsets.all(8),
@@ -122,7 +122,7 @@ EasyDropdownComponent(
 )
 ```
 
-## Why Easy Dropdown? 🤔
+## Why Custom Easy Dropdown? 🤔
 
 ### Performance
 - Efficient list rendering for large datasets

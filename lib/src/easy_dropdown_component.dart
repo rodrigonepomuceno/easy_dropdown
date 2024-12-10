@@ -1,7 +1,7 @@
-import 'package:easy_dropdown/src/models/easy_dropdown_item.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'models/easy_dropdown_item.dart';
 
 class EasyDropdownComponent extends StatefulWidget {
   const EasyDropdownComponent({
@@ -15,23 +15,28 @@ class EasyDropdownComponent extends StatefulWidget {
     this.isSimplified = false,
     this.maxHeight,
     this.maxWidth,
+    this.listHeight,
+    this.listWidth,
     this.fieldWidth = 200,
     this.fieldHeight = 40,
-    this.listWidth,
-    this.listHeight,
     this.onSelectionChanged,
     this.onClose,
     this.onListChanged,
     this.customField,
     this.customSearchField,
+    this.searchController,
     this.customClearButton,
     this.customSelectAllButton,
     this.customListItem,
     this.customSelectedListItem,
+    this.customSelectedHeader,
+    this.customAvailableHeader,
+    this.customEmptyResultsWidget,
     this.dropdownDecoration,
     this.dropdownElevation = 8,
     this.dropdownPadding,
     this.dropdownOuterPadding = const EdgeInsets.only(top: 4),
+    this.searchMatcher,
   });
 
   final List<EasyDropdownItem> items;
@@ -43,33 +48,37 @@ class EasyDropdownComponent extends StatefulWidget {
   final bool isSimplified;
   final double? maxHeight;
   final double? maxWidth;
+  final double? listHeight;
+  final double? listWidth;
   final double fieldWidth;
   final double fieldHeight;
-  final double? listWidth;
-  final double? listHeight;
   final Function(EasyDropdownItem)? onSelectionChanged;
   final Function(List<EasyDropdownItem>)? onClose;
   final Function(List<EasyDropdownItem>)? onListChanged;
   final Widget? customField;
   final Widget? customSearchField;
+  final TextEditingController? searchController;
   final Widget? customClearButton;
   final Widget? customSelectAllButton;
   final Widget Function(EasyDropdownItem item, VoidCallback onTap)? customListItem;
   final Widget Function(EasyDropdownItem item, VoidCallback onTap)? customSelectedListItem;
+  final Widget? customSelectedHeader;
+  final Widget? customAvailableHeader;
+  final Widget? customEmptyResultsWidget;
   final BoxDecoration? dropdownDecoration;
   final double dropdownElevation;
   final EdgeInsetsGeometry? dropdownPadding;
   final EdgeInsetsGeometry dropdownOuterPadding;
+  final bool Function(EasyDropdownItem item, String searchText)? searchMatcher;
 
   @override
   State<EasyDropdownComponent> createState() => _EasyDropdownComponentState();
 }
 
 class _EasyDropdownComponentState extends State<EasyDropdownComponent> {
-  final TextEditingController _searchController = TextEditingController();
+  late final TextEditingController _searchController;
   final List<EasyDropdownItem> _selectedItems = [];
-  final List<EasyDropdownItem> _filteredItems = [];
-  final List<EasyDropdownItem> _unselectedItems = [];
+  List<EasyDropdownItem> _filteredItems = [];
   bool _isOpen = false;
   static _EasyDropdownComponentState? _openDropdown;
   OverlayEntry? _overlayEntry;
@@ -83,179 +92,185 @@ class _EasyDropdownComponentState extends State<EasyDropdownComponent> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_filterItems);
+    _searchController = widget.searchController ?? TextEditingController();
+    _searchController.addListener(() {
+      _filterItems(_searchController.text);
+    });
     
     for (final item in widget.items) {
       if (item.selected) {
         _selectedItems.add(item);
-      } else {
-        if (!widget.isSimplified) {
-          _unselectedItems.add(item);
-        }
       }
     }
-
-    if (widget.isSimplified) {
-      _filteredItems.addAll(widget.items);
-    } else {
-      _filteredItems.addAll(_unselectedItems);
-    }
+    
+    _filterItems('');
   }
 
-  void _filterItems() {
-    setState(() {
-      final searchText = _searchController.text.toLowerCase();
+  void _filterItems(String value) {
+    bool defaultMatcher(EasyDropdownItem item, String searchText) {
+      final searchLower = searchText.toLowerCase();
       
-      if (widget.isSimplified) {
-        _filteredItems
-          ..clear()
-          ..addAll(
-            widget.items.where((item) {
-              if (item.widget is Text) {
-                return (item.widget as Text).data!.toLowerCase().contains(searchText);
-              } else if (item.widget is ListTile) {
-                final title = ((item.widget as ListTile).title as Text?)?.data?.toLowerCase();
-                return title?.contains(searchText) ?? false;
-              }
-              return false;
-            }),
-          );
-      } else {
-        if (searchText.isEmpty) {
-          _filteredItems
-            ..clear()
-            ..addAll(_unselectedItems);
-        } else {
-          _filteredItems
-            ..clear()
-            ..addAll(
-              _unselectedItems.where((item) {
-                if (item.widget is Text) {
-                  return (item.widget as Text).data!.toLowerCase().contains(searchText);
-                } else if (item.widget is ListTile) {
-                  final title = ((item.widget as ListTile).title as Text?)?.data?.toLowerCase();
-                  return title?.contains(searchText) ?? false;
-                }
-                return false;
-              }),
-            );
-        }
+      if (item.searchableText != null) {
+        return item.searchableText!.toLowerCase().contains(searchLower);
       }
-    });
+    
+      if (item.widget is ListTile) {
+        final listTile = item.widget as ListTile;
+        final title = (listTile.title as Text?)?.data?.toLowerCase() ?? '';
+        final subtitle = (listTile.subtitle as Text?)?.data?.toLowerCase() ?? '';
+        return title.contains(searchLower) || subtitle.contains(searchLower);
+      } else if (item.widget is Text) {
+        final text = (item.widget as Text).data;
+        return text != null ? text.toLowerCase().contains(searchLower) : true;
+      }
+      return true;
+    }
+
+    final matcher = widget.searchMatcher ?? defaultMatcher;
+    final searchText = value.trim();
+    
+    if (mounted) {
+      setState(() {
+        if (widget.isSimplified) {
+          _filteredItems = searchText.isEmpty 
+              ? List.from(widget.items)
+              : widget.items.where((item) => matcher(item, searchText)).toList();
+        } else {
+          final selectedIds = _selectedItems.map((item) => item.id).toSet();
+          final availableItems = widget.items.where((item) => !selectedIds.contains(item.id)).toList();
+          
+          if (searchText.isEmpty) {
+            _filteredItems = availableItems;
+          } else {
+            _filteredItems = availableItems.where((item) => matcher(item, searchText)).toList();
+          }
+        }
+      });
+    }
   }
 
   void _toggleItem(EasyDropdownItem item, StateSetter? dialogSetState) {
     setState(() {
-      final updatedItem = item.copyWith(selected: !item.selected);
-      
-      final itemIndex = widget.items.indexOf(item);
-      if (itemIndex != -1) {
-        widget.items[itemIndex] = updatedItem;
-      }
-
-      if (_selectedItems.contains(item)) {
-        _selectedItems.remove(item);
-        if (!widget.isSimplified) {
-          _unselectedItems.add(updatedItem);
-          _filteredItems.add(updatedItem);
+      if (widget.isSimplified) {
+        final updatedItem = item.copyWith(selected: !item.selected);
+        final itemIndex = widget.items.indexOf(item);
+        if (itemIndex != -1) {
+          widget.items[itemIndex] = updatedItem;
+        }
+        
+        if (updatedItem.selected) {
+          _selectedItems.add(updatedItem);
         } else {
-          final filteredIndex = _filteredItems.indexOf(item);
-          if (filteredIndex != -1) {
-            _filteredItems[filteredIndex] = updatedItem;
-          }
+          _selectedItems.removeWhere((i) => i.id == item.id);
+        }
+        
+        final filteredIndex = _filteredItems.indexOf(item);
+        if (filteredIndex != -1) {
+          _filteredItems[filteredIndex] = updatedItem;
         }
       } else {
-        _selectedItems.add(updatedItem);
-        if (!widget.isSimplified) {
-          _unselectedItems.remove(item);
-          _filteredItems.remove(item);
+        if (_selectedItems.any((i) => i.id == item.id)) {
+          _selectedItems.removeWhere((i) => i.id == item.id);
+          _filteredItems.add(item);
         } else {
-          final filteredIndex = _filteredItems.indexOf(item);
-          if (filteredIndex != -1) {
-            _filteredItems[filteredIndex] = updatedItem;
-          }
+          _selectedItems.add(item);
+          _filteredItems.removeWhere((i) => i.id == item.id);
         }
       }
-
-      widget.onSelectionChanged?.call(updatedItem);
+      
+      widget.onSelectionChanged?.call(item);
     });
-
+    
     dialogSetState?.call(() {});
   }
 
   void _clearSelection(StateSetter? dialogSetState) {
     setState(() {
-      final updatedItems = _selectedItems.map((item) {
-        final updatedItem = item.copyWith(selected: false); 
-        final itemIndex = widget.items.indexOf(item);
-        if (itemIndex != -1) {
-          widget.items[itemIndex] = updatedItem;
-        }
-        return updatedItem;
-      }).toList();
-
-      if (!widget.isSimplified) {
-        _unselectedItems.addAll(updatedItems);
-        _filteredItems.addAll(updatedItems);
-      } else {
-        // Update the filtered items for simplified mode
-        for (var item in updatedItems) {
+      if (widget.isSimplified) {
+        for (final item in _selectedItems) {
           final index = _filteredItems.indexWhere((i) => i.id == item.id);
           if (index != -1) {
-            _filteredItems[index] = item;
+            _filteredItems[index] = _filteredItems[index].copyWith(selected: false);
           }
         }
+        _selectedItems.clear();
+      } else {      
+        _selectedItems.forEach((item) {
+          final index = widget.items.indexWhere((i) => i.id == item.id);
+          if (index != -1) {
+            widget.items[index] = widget.items[index].copyWith(selected: false);
+          }
+        });
+        _selectedItems.clear();
+        _filterItems(_searchController.text);
       }
-      _selectedItems.clear();
-      
-      widget.onListChanged?.call([...widget.items]);
     });
 
+    widget.onListChanged?.call(_selectedItems);
     dialogSetState?.call(() {});
   }
 
   void _selectAll(StateSetter? dialogSetState) {
     setState(() {
       if (widget.isSimplified) {
-        final updatedItems = _filteredItems.map((item) {
+        for (final item in _filteredItems) {
           if (!item.selected) {
             final updatedItem = item.copyWith(selected: true);
-            final itemIndex = widget.items.indexOf(item);
-            if (itemIndex != -1) {
-              widget.items[itemIndex] = updatedItem;
+            final index = _filteredItems.indexWhere((i) => i.id == item.id);
+            if (index != -1) {
+              _filteredItems[index] = updatedItem;
+              if (!_selectedItems.contains(item)) {
+                _selectedItems.add(updatedItem);
+              }
             }
-            return updatedItem;
-          }
-          return item;
-        }).toList();
-
-        // Update filtered items and selected items
-        for (var i = 0; i < _filteredItems.length; i++) {
-          _filteredItems[i] = updatedItems[i];
-          if (!_selectedItems.any((item) => item.id == updatedItems[i].id) && 
-              updatedItems[i].selected) {
-            _selectedItems.add(updatedItems[i]);
           }
         }
       } else {
-        final updatedItems = _unselectedItems.map((item) {
-          final updatedItem = item.copyWith(selected: true);
-          final itemIndex = widget.items.indexOf(item);
-          if (itemIndex != -1) {
-            widget.items[itemIndex] = updatedItem;
+        for (final item in _filteredItems) {
+          final unselectedItem = item.copyWith(selected: false);
+          if (!_selectedItems.contains(item)) {
+            _selectedItems.add(unselectedItem);
+            final index = widget.items.indexWhere((i) => i.id == item.id);
+            if (index != -1) {
+              widget.items[index] = unselectedItem;
+            }
           }
-          return updatedItem;
-        }).toList();
-
-        _selectedItems.addAll(updatedItems);
-        _unselectedItems.clear();
-        _filteredItems.clear();
+        }
+        _filterItems(_searchController.text);
       }
-
-      widget.onListChanged?.call([...widget.items]);
     });
 
+    widget.onListChanged?.call(_selectedItems);
     dialogSetState?.call(() {});
+  }
+
+  Widget _buildDefaultEmptyResults() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+          const SizedBox(height: 8),
+          Text(
+            'No results found',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Try adjusting your search',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSelectionDialog() {
@@ -294,7 +309,14 @@ class _EasyDropdownComponentState extends State<EasyDropdownComponent> {
                     if (widget.enableSearch)
                       Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: widget.customSearchField ?? TextField(
+                        child: widget.customSearchField?.copyWith(
+                          controller: _searchController,
+                           onChanged: (value) {
+                            setState(() {
+                              _filterItems(value);
+                            });
+                          },
+                        ) ?? TextField(
                           controller: _searchController,
                           decoration: InputDecoration(
                             hintText: widget.searchHintText ?? 'Search...',
@@ -306,7 +328,7 @@ class _EasyDropdownComponentState extends State<EasyDropdownComponent> {
                           ),
                           onChanged: (value) {
                             setState(() {
-                              _filterItems();
+                              _filterItems(value);
                             });
                           },
                         ),
@@ -316,84 +338,51 @@ class _EasyDropdownComponentState extends State<EasyDropdownComponent> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          widget.customClearButton ?? TextButton(
-                            onPressed: () => _clearSelection(setState),
-                            child: const Text('Clear'),
+                          InkWell(
+                            onTap: () => _clearSelection(setState),
+                            child: widget.customClearButton ?? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.clear_all, size: 16, color: Colors.red),
+                                  SizedBox(width: 4),
+                                  Text('Clear All', 
+                                    style: TextStyle(color: Colors.red)),
+                                ],
+                              ),
+                            ),
                           ),
-                          widget.customSelectAllButton ?? TextButton(
-                            onPressed: () => _selectAll(setState),
-                            child: const Text('Select All'),
+                          InkWell(
+                            onTap: () => _selectAll(setState),
+                            child: widget.customSelectAllButton ?? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.select_all, size: 16, color: Colors.blue),
+                                  SizedBox(width: 4),
+                                  Text('Select All', 
+                                    style: TextStyle(color: Colors.blue)),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const Divider(height: 1),
+                    const SizedBox(height: 8),
                     Flexible(
                       child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (widget.isSimplified)
-                              ...List.generate(
-                                _filteredItems.length,
-                                (index) {
-                                  final item = _filteredItems[index];
-                                  return widget.customListItem?.call(
-                                    item,
-                                    () => _toggleItem(item, setState),
-                                  ) ?? ListTile(
-                                    dense: true,
-                                    title: item.widget,
-                                    trailing: item.selected ? const Icon(Icons.check, size: 20) : null,
-                                    onTap: () => _toggleItem(item, setState),
-                                  );
-                                },
-                              )
-                            else ...[
-                              if (_selectedItems.isNotEmpty) ...[
-                                const Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('Selected', style: TextStyle(fontWeight: FontWeight.bold)),
-                                ),
-                                ...List.generate(
-                                  _selectedItems.length,
-                                  (index) {
-                                    final item = _selectedItems[index];
-                                    return widget.customSelectedListItem?.call(
-                                      item,
-                                      () => _toggleItem(item, setState),
-                                    ) ?? ListTile(
-                                      dense: true,
-                                      title: item.widget,
-                                      trailing: const Icon(Icons.check, size: 20),
-                                      onTap: () => _toggleItem(item, setState),
-                                    );
-                                  },
-                                ),
-                              ],
-                              if (_filteredItems.isNotEmpty) ...[
-                                const Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text('Available', style: TextStyle(fontWeight: FontWeight.bold)),
-                                ),
-                                ...List.generate(
-                                  _filteredItems.length,
-                                  (index) {
-                                    final item = _filteredItems[index];
-                                    return widget.customListItem?.call(
-                                      item,
-                                      () => _toggleItem(item, setState),
-                                    ) ?? ListTile(
-                                      dense: true,
-                                      title: item.widget,
-                                      onTap: () => _toggleItem(item, setState),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ],
-                          ],
-                        ),
+                        child: _buildList(setState),
                       ),
                     ),
                   ],
@@ -406,7 +395,6 @@ class _EasyDropdownComponentState extends State<EasyDropdownComponent> {
     );
     overlay.insert(_overlayEntry!);
 
-    // Add a listener to close the dropdown when clicking outside
     bool handlePointerRoute(PointerEvent event) {
       if (event is! PointerDownEvent) return false;
       
@@ -416,7 +404,6 @@ class _EasyDropdownComponentState extends State<EasyDropdownComponent> {
       final result = BoxHitTestResult();
       box.hitTest(result, position: box.globalToLocal(event.position));
       
-      // Check if the click is outside both the field and the dropdown
       if (result.path.isEmpty && _overlayEntry != null) {
         _closeDropdown();
       }
@@ -427,6 +414,92 @@ class _EasyDropdownComponentState extends State<EasyDropdownComponent> {
     _removeGlobalListener = () {
       GestureBinding.instance.pointerRouter.removeRoute(1, handlePointerRoute);
     };
+  }
+
+  Widget _buildList(StateSetter setState) {
+    if (widget.isSimplified) {
+      if (_filteredItems.isEmpty && _searchController.text.isNotEmpty) {
+        return widget.customEmptyResultsWidget ?? _buildDefaultEmptyResults();
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        itemCount: _filteredItems.length,
+        itemBuilder: (context, index) {
+          final item = _filteredItems[index];
+          return widget.customListItem?.call(
+            item,
+            () => _toggleItem(item, setState),
+          ) ?? ListTile(
+            dense: true,
+            title: item.widget,
+            trailing: item.selected ? const Icon(Icons.check, size: 20) : null,
+            onTap: () => _toggleItem(item, setState),
+          );
+        },
+      );
+    } else {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_selectedItems.isNotEmpty) ...[
+            widget.customSelectedHeader ?? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                  SizedBox(width: 4),
+                  Text(
+                    'Selected',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...List.generate(
+              _selectedItems.length,
+              (index) {
+                final item = _selectedItems[index];
+                return widget.customSelectedListItem?.call(
+                  item,
+                  () => _toggleItem(item, setState),
+                ) ?? ListTile(
+                  dense: true,
+                  title: item.widget,
+                  onTap: () => _toggleItem(item, setState),
+                );
+              },
+            ),
+            const Divider(),
+          ],
+          if (_filteredItems.isEmpty && _searchController.text.isNotEmpty)
+            widget.customEmptyResultsWidget ?? _buildDefaultEmptyResults()
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              itemCount: _filteredItems.length,
+              itemBuilder: (context, index) {
+                final item = _filteredItems[index];
+                return widget.customListItem?.call(
+                  item,
+                  () => _toggleItem(item, setState),
+                ) ?? ListTile(
+                  dense: true,
+                  title: item.widget,
+                  onTap: () => _toggleItem(item, setState),
+                );
+              },
+            ),
+        ],
+      );
+    }
   }
 
   void _closeDropdown() {
@@ -494,4 +567,8 @@ class _EasyDropdownComponentState extends State<EasyDropdownComponent> {
     _removeGlobalListener?.call();
     super.dispose();
   }
+}
+
+extension on Widget? {
+  copyWith({required TextEditingController controller, required Function(String)? onChanged}) {}
 }

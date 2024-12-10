@@ -1,9 +1,9 @@
 ## [1.0.0] - First release
  - Initial release
 
-## 0.0.1
+## 1.0.0
 
-* Initial release
+* Initial release of Custom Easy Dropdown
 * Core features:
   - Smart overlay management
   - Single/multiple item selection

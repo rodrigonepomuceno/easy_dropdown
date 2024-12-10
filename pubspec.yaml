@@ -1,4 +1,4 @@
-name: easy_dropdown
+name: custom_easy_dropdown
 description: A Flutter dropdown component that provides a simple and customizable way to handle item selection with separate selected and unselected lists.
 version: 1.0.0
 homepage: https://github.com/rodrigonepomuceno/easy_dropdown
@@ -15,5 +15,3 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
-
-

@@ -1,4 +1,5 @@
-import 'package:easy_dropdown/easy_dropdown.dart';
+
+import 'package:custom_easy_dropdown/easy_dropdown.dart';
 import 'package:flutter/material.dart';
 
 class SimpleExample extends StatefulWidget {
